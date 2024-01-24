@@ -1,0 +1,35 @@
+#! /bin/bash
+
+OUTPUT='set term png; set output "|display png:-"'
+N=$#
+eval FILE=\${$N}
+usage=`mktemp`
+cat > $usage <<EOF 
+Usage: ./dessine_histogramme [-h] | [-pdf] <calcul_de_frequences> <fichier_à_analyser>    
+Exemples: ./dessine_histogramme ./frequence germinal_nettoye
+             ouvre une fenêtre où l'histogramme est visualisé
+          ./dessine_histogramme -pdf python3 frequence.py germinal_nettoye
+             crée un <fichier_à_analyser>.pdf de l'histogramme
+EOF
+
+if [[ $# -eq 0 ]]; then cat $usage; rm -f $usage; exit 1; fi
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        "-h" ) cat $usage; rm -f $usage; exit 1;;
+        "-pdf") echo "Production de $FILE.pdf"
+                OUTPUT="set term pdf; set output '$FILE.pdf'"; shift;;
+        *) COMMANDE="$@"; shift $#;;
+    esac                
+done
+        
+data=`mktemp`
+eval $COMMANDE > $data
+gnuplot -p <<EOF
+$OUTPUT
+set boxwidth 0.9 relative
+set style data histograms
+set style fill solid 1.0 border -1
+plot "$data" using 2:xticlabels(1)
+EOF
+rm $data
